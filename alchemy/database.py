@@ -11,7 +11,10 @@ Base.metadata.create_all(bind=engine)
 
 def add_data(data):
 	with Session(engine) as session, session.begin():
-		session.add_all(data)
+		try:
+			session.add_all(data)
+		except:
+			session.rollback()
 
 
 def in_db(obj, primary_key):
