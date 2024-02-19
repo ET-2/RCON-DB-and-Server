@@ -1,4 +1,4 @@
-from alchemy.database import get_player_by_steam64, get_top_killers, get_top_week_killers
+from alchemy.database import get_player_by_steam64, get_top_killers, get_top_week_killers, get_weapons
 
 
 class Provider:
@@ -12,6 +12,9 @@ class Provider:
         ret_players = []
 
         for player in players:
+            weapons = get_weapons(player.id)
+            print(weapons)
+
             data = dict([
                 ('steam_64', player.steam_id_64),
                 ('name', player.player),

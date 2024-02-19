@@ -101,7 +101,8 @@ async def get_maps(server_url, server_name, page):
                     )
                 )
             total_data.extend(db_matches)
-        add_data(total_data)
+            add_data(total_data)
+
         ret_page = page + 1
         return ret_page
 

@@ -27,21 +27,21 @@ def in_db(obj, primary_key):
 			return True
 
 
-def get_weapons():
+def get_weapons(player_id):
 	with Session(engine) as session:
 		stmt = (
 			select(WeaponKills)
 			.join(WeaponKills.player)
+			.where(DBPlayer.id == player_id)
 		)
 
+		result = session.execute(stmt).scalars()
 		weapons = []
 
-		result = session.execute(stmt).scalars()
-		for w in result:
-			w_name = w.weapons
-			if w_name not in weapon:
-				weapons.append(w_name)
-				print(w.player_name, w.weapon)
+		for weapon in result:
+			weapons.append(weapon)
+
+		return weapons
 
 
 def get_player_by_steam64(steam_64):
@@ -62,8 +62,6 @@ def get_player_by_steam64(steam_64):
 
 
 def get_top_killers():
-	delta = datetime.datetime.now() - datetime.timedelta(days=7)
-
 	with Session(engine) as session:
 		u = union_all(
 			select(DBPlayer)
@@ -83,7 +81,7 @@ def get_top_killers():
 		player_64s = []
 
 		for player in players:
-			if (len(top_players) >= 10):
+			if (len(top_players) >= 25):
 				break
 			elif player.steam_id_64 in player_64s:
 				print(player.player, player.kills)
@@ -117,7 +115,7 @@ def get_top_week_killers():
 		player_64s = []
 
 		for player in players:
-			if (len(top_players) >= 100):
+			if (len(top_players) >= 10):
 				break
 			elif player.steam_id_64 in player_64s:
 				continue
