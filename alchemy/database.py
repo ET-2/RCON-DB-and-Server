@@ -27,18 +27,18 @@ def in_db(obj, primary_key):
 			return True
 
 
-def get_weapons(player_id):
+def get_weapons_by_steam64(steam_64):
 	with Session(engine) as session:
-		stmt = (
+		query = (
 			select(WeaponKills)
-			.join(WeaponKills.player)
-			.where(DBPlayer.id == player_id)
-		)
+			.where(WeaponKills.steam_id_64 == steam_64)
+		).order_by(WeaponKills.kills.desc())
 
-		result = session.execute(stmt).scalars()
+		result = session.execute(query).scalars()
 		weapons = []
 
 		for weapon in result:
+			print(weapon)
 			weapons.append(weapon)
 
 		return weapons
@@ -48,7 +48,6 @@ def get_player_by_steam64(steam_64):
 	with Session(engine) as session:
 		query = (
 			select(DBPlayer)
-			.join(DBPlayer.match)
 			.where(DBPlayer.steam_id_64 == steam_64)
 		).order_by(DBPlayer.kills.desc())
 
@@ -78,18 +77,12 @@ def get_top_killers():
 		stmt = select(DBPlayer).from_statement(u)
 		players = session.execute(stmt).scalars()
 		top_players = []
-		player_64s = []
 
 		for player in players:
 			if (len(top_players) >= 25):
 				break
-			elif player.steam_id_64 in player_64s:
-				print(player.player, player.kills)
-				continue
 			else:
-				print(player.player, player.kills)
 				top_players.append(player)
-				player_64s.append(player.steam_id_64)
 
 		return top_players
 
@@ -112,15 +105,11 @@ def get_top_week_killers():
 		stmt = select(DBPlayer).from_statement(u)
 		players = session.execute(stmt).scalars()
 		top_players = []
-		player_64s = []
 
 		for player in players:
 			if (len(top_players) >= 10):
 				break
-			elif player.steam_id_64 in player_64s:
-				continue
 			else:
 				top_players.append(player)
-				player_64s.append(player.steam_id_64)
 
 		return top_players

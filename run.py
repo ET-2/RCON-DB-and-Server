@@ -166,7 +166,11 @@ async def get_players(url, params):
                 combat=player.combat,
                 offense=player.offense,
                 defense=player.defense,
-                support=player.support
+                support=player.support,
+                most_killed=most_killed,
+                deaths_by=deaths_by,
+                weapons=weapons,
+                death_by_weapons=death_by_weapons
                 )
             )
             db_data.append(db_player)

@@ -1,4 +1,4 @@
-from alchemy.database import get_player_by_steam64, get_top_killers, get_top_week_killers, get_weapons
+from alchemy.database import get_player_by_steam64, get_top_killers, get_top_week_killers
 
 
 class Provider:
