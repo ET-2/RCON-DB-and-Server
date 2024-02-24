@@ -8,6 +8,14 @@ from data_types.parse_types import parse_maps, parse_players
 from tenacity import retry, stop_after_attempt
 
 
+async def update():
+    east = ''
+    west = ''
+
+    await run_matches(east, 'east', 1)
+    await run_matches(west, 'west', 1)
+
+
 async def start():
     central = ''
     east = ''

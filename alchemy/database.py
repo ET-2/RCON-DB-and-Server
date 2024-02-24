@@ -15,6 +15,7 @@ def add_data(data):
 		try:
 			print("<<<< ADDING DATA >>>>")
 			session.add_all(data)
+
 		except:
 			print("!!!! ROLLBACK !!!!")
 			session.rollback()
