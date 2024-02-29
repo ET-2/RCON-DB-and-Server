@@ -12,9 +12,6 @@ class Provider:
         ret_players = []
 
         for player in players:
-            weapons = get_weapons(player.id)
-            print(weapons)
-
             data = dict([
                 ('steam_64', player.steam_id_64),
                 ('name', player.player),
