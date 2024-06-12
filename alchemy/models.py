@@ -18,7 +18,6 @@ class DBMatch(Base):
     server_name:Mapped[str]
     map_name:Mapped[str]
     match_json_url:Mapped[str]
-    players:Mapped[List['DBPlayer']] = relationship(back_populates='match')
 
     def __repr__(self) -> str:
         return f'<Match_ID: {self.id}>'
@@ -26,12 +25,12 @@ class DBMatch(Base):
 
 class DBPlayer(Base):
     __tablename__ = 'players'
-    match:Mapped['DBMatch'] = relationship(back_populates='players')
     id:Mapped[int] = mapped_column(primary_key=True)
     player_id:Mapped[int]
     steam_id_64:Mapped[str]
     player:Mapped[str]
-    match_id:Mapped[int] = mapped_column(ForeignKey('matches.id'))
+    match_id:Mapped[int]
+    creation_time:Mapped[str]
     kills:Mapped[int]
     kills_streak:Mapped[int]
     deaths:Mapped[int]
@@ -53,10 +52,6 @@ class DBPlayer(Base):
     offense:Mapped[int] = mapped_column(default=0)
     defense:Mapped[int] = mapped_column(default=0)
     support:Mapped[int] = mapped_column(default=0)
-    most_killed:Mapped[List['PlayerKills']] = relationship(back_populates='player')
-    deaths_by:Mapped[List['PlayerDeaths']] = relationship(back_populates='player')
-    weapons:Mapped[List['WeaponKills']] = relationship(back_populates='player')
-    death_by_weapons:Mapped[List['WeaponDeaths']] = relationship(back_populates='player')
 
     def __repr__(self):
         return f'<Player: {self.id} {self.player}>'
@@ -64,55 +59,59 @@ class DBPlayer(Base):
 
 class PlayerKills(Base):
     __tablename__ = 'player_kills'
-    player:Mapped['DBPlayer'] = relationship(back_populates='most_killed')
     playerkill_id:Mapped[int] = mapped_column(primary_key=True)
     player_name:Mapped[str]
-    player_id:Mapped[int] = mapped_column(ForeignKey('players.id'))
+    player_id:Mapped[int]
     steam_id_64:Mapped[str]
+    match_id:Mapped[int]
+    match_time:Mapped[str]
     victim:Mapped[str]
     kills:Mapped[int]
 
     def __repr__(self) -> str:
-        return f'<PlayerKill: {self.player} killed {self.victim}: {self.kills}>'
+        return f'<PlayerKill: {self.player_name} killed {self.victim}: {self.kills}>'
 
 
 class PlayerDeaths(Base):
     __tablename__ = 'player_deaths'
-    player:Mapped['DBPlayer'] = relationship(back_populates='deaths_by')
     playerdeath_id:Mapped[int] = mapped_column(primary_key=True)
     player_name:Mapped[str]
-    player_id:Mapped[int] = mapped_column(ForeignKey('players.id'))
+    player_id:Mapped[int]
     steam_id_64:Mapped[str]
+    match_id:Mapped[int]
+    match_time:Mapped[str]
     killer:Mapped[str]
     kills:Mapped[int]
 
     def __repr__(self) -> str:
-        return f'<PlayerDeath: {self.player} killed by {self.killer}: {self.kills}>'
+        return f'<PlayerDeath: {self.player_name} killed by {self.killer}: {self.kills}>'
 
 
 class WeaponKills(Base):
     __tablename__ = 'weapon_kills'
-    player:Mapped['DBPlayer'] = relationship(back_populates='weapons')
     weaponkill_id:Mapped[int] = mapped_column(primary_key=True)
     player_name:Mapped[str]
-    player_id:Mapped[int] = mapped_column(ForeignKey('players.id'))
+    player_id:Mapped[int]
     steam_id_64:Mapped[str]
+    match_id:Mapped[int]
+    match_time:Mapped[str]
     weapon:Mapped[str]
     kills:Mapped[int]
 
     def __repr__(self) -> str:
-        return f'<WeaponKill: {self.player} with {self.weapon}: {self.kills}>'
+        return f'<WeaponKill: {self.player_name} with {self.weapon}: {self.kills}>'
 
 
 class WeaponDeaths(Base):
     __tablename__ = 'weapon_deaths'
-    player:Mapped['DBPlayer'] = relationship(back_populates='death_by_weapons')
     weapondeath_id:Mapped[int] = mapped_column(primary_key=True)
     player_name:Mapped[str]
-    player_id:Mapped[int] = mapped_column(ForeignKey('players.id'))
+    player_id:Mapped[int]
     steam_id_64:Mapped[str]
+    match_id:Mapped[int]
+    match_time:Mapped[str]
     weapon:Mapped[str]
     kills:Mapped[int]
 
     def __repr__(self) -> str:
-        return f'<WeaponDeath: {self.player} by {self.weapon}: {self.kills}>'
+        return f'<WeaponDeath: {self.player_name} by {self.weapon}: {self.kills}>'
