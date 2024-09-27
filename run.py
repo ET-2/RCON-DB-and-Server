@@ -8,21 +8,28 @@ from data_types.parse_types import parse_maps, parse_players
 from tenacity import retry, stop_after_attempt
 
 
+async def update():
+    west = 'https://crcon-west.theline.gg'
+
+    await run_matches(west, 'west', 1, 2)
+    await run_matches(west, 'event', 1, 1)
+
+
 async def start():
-    central = ''
-    east = ''
-    west = ''
+    west = 'https://crcon-west.theline.gg'
 
-    await run_matches(central, 'central', 1)
-    await run_matches(east, 'east', 1)
-    await run_matches(west, 'west', 1)
+    await run_matches(west, 'server_5', 1, 5)
+    await run_matches(west, 'central', 1, 4)
+    await run_matches(west, 'east', 1, 3)
+    await run_matches(west, 'west', 1, 2)
+    await run_matches(west, 'event', 1, 1)
 
 
-async def run_matches(url, server, page):
+async def run_matches(url, server, page, server_number):
     cur_page = page
-    ret_page = await get_maps(url, server, page)
+    ret_page = await get_maps(url, server, page, server_number)
     if ret_page > cur_page:
-        await run_matches(url, server, ret_page)
+        await run_matches(url, server, ret_page, server_number)
 
 
 @retry(stop=stop_after_attempt(5))
@@ -31,12 +38,18 @@ async def call_rcon(url, params):
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url, params=params, verify_ssl=False) as resp:
-                data = await resp.json()
-                data_result = data.get('result')
 
-                if resp.status == 200 and data_result:
+                if resp.status == 200:
+                    data = await resp.json()
+                    data_result = data.get('result')
                     print(f'[{resp.status}] {resp.url}')
                     return data_result
+
+                elif resp.status == 500:
+                    return None
+
+                elif resp.status == 502:
+                    return None
 
                 elif resp.status != 200:
                     print(f'Response Status: {resp.status}')
@@ -44,10 +57,14 @@ async def call_rcon(url, params):
         raise Exception
 
 
-async def get_maps(server_url, server_name, page):
+async def get_maps(server_url, server_name, page, server_number):
     url = f'{server_url}/api/get_scoreboard_maps'
-    params = {'page': page}
+    params = {'page': page, 'server_number': server_number}
     matches = await call_rcon(url=url, params=params)
+    if matches == None:
+        ret_page = page + 1
+        return ret_page
+
     matches_result = matches.get('maps')
     matches_parsed = []
     total_data = []
@@ -67,7 +84,7 @@ async def get_maps(server_url, server_name, page):
             
             match_url = f'{server_url}/api/get_map_scoreboard'
             match_param = {'map_id': match.id}
-            players, db_data = await get_players(match_url, match_param)
+            players, db_data = await get_players(match_url, match_param, match)
 
             if db_data:
                 total_data.extend(db_data)
@@ -82,33 +99,21 @@ async def get_maps(server_url, server_name, page):
                     server_number=match.server_number,
                     server_name=server_name,
                     map_name=match.map_name,
-                    match_json_url=match_url,
-                    players=players
-                    )
-                )
-
-            else:
-                db_match = db_matches.append(DBMatch(
-                    id=match.id,
-                    long_name=match.long_name,
-                    creation_time=match.creation_time,
-                    start=match.start,
-                    end=match.end,
-                    server_number=match.server_number,
-                    server_name=server_name,
-                    map_name=match.map_name,
                     match_json_url=match_url
                     )
                 )
+
             total_data.extend(db_matches)
-        add_data(total_data)
+            add_data(total_data)
+
         ret_page = page + 1
         return ret_page
 
 
-async def get_players(url, params):
+async def get_players(url, params, match_data):
     players_rcon = await call_rcon(url=url, params=params)
     players = players_rcon.get('player_stats')
+
     parsed_players = await parse_players(players)
     db_players = []
     db_data = []
@@ -122,20 +127,19 @@ async def get_players(url, params):
 
             player_ids.append(player.id)
 
-
-            most_killed = get_most_killed(player.most_killed, player.id)
+            most_killed = get_most_killed(player.most_killed, player.id, player.map_id, match_data.creation_time, player.player)
             if most_killed:
                 db_data.extend(most_killed)
 
-            deaths_by = get_deaths_by(player.death_by, player.id)
+            deaths_by = get_deaths_by(player.death_by, player.id, player.map_id, match_data.creation_time, player.player)
             if deaths_by:
                 db_data.extend(deaths_by)
 
-            weapons = get_weapons(player.weapons, player.id)
+            weapons = get_weapons(player.weapons, player.id, player.map_id, match_data.creation_time, player.player)
             if weapons:
                 db_data.extend(weapons)
 
-            death_by_weapons = get_death_by_weapons(player.death_by_weapons, player.id)
+            death_by_weapons = get_death_by_weapons(player.death_by_weapons, player.id, player.map_id, match_data.creation_time, player.player)
             if death_by_weapons:
                 db_data.extend(death_by_weapons)
 
@@ -145,6 +149,7 @@ async def get_players(url, params):
                 steam_id_64=player.steam_id_64,
                 player=player.player,
                 match_id=player.map_id,
+                creation_time=match_data.creation_time,
                 kills=player.kills,
                 kills_streak=player.kills_streak,
                 deaths=player.deaths,
@@ -175,14 +180,16 @@ async def get_players(url, params):
     return db_players, db_data
 
 
-def get_most_killed(data, data_id):
+def get_most_killed(data, data_id, match_id, time, name):
     db_player_kills = []
     for item in data:
         db_player_kills.append(PlayerKills(
             playerkill_id=uuid.uuid4().time,
-            player_name=item.player,
+            player_name=name,
             player_id=item.player_id,
             steam_id_64=item.steam_id_64,
+            match_id=match_id,
+            match_time=time,
             victim=item.victim,
             kills=item.kill
             )
@@ -191,14 +198,16 @@ def get_most_killed(data, data_id):
     return db_player_kills
 
 
-def get_deaths_by(data, data_id):
+def get_deaths_by(data, data_id, match_id, time, name):
     db_deaths_by = []
     for item in data:
         db_deaths_by.append(PlayerDeaths(
             playerdeath_id=uuid.uuid4().time,
-            player_name=item.player,
+            player_name=name,
             player_id=item.player_id,
             steam_id_64=item.steam_id_64,
+            match_id=match_id,
+            match_time=time,
             killer=item.victim,
             kills=item.kill
             )
@@ -207,14 +216,16 @@ def get_deaths_by(data, data_id):
     return db_deaths_by
 
 
-def get_weapons(data, data_id):
+def get_weapons(data, data_id, match_id, time, name):
     db_weapons = []
     for item in data:
         db_weapons.append(WeaponKills(
             weaponkill_id=uuid.uuid4().time,
-            player_name=item.player,
+            player_name=name,
             player_id=item.player_id,
             steam_id_64=item.steam_id_64,
+            match_id=match_id,
+            match_time=time,
             weapon=item.weapon,
             kills=item.kill
             )
@@ -223,14 +234,16 @@ def get_weapons(data, data_id):
     return db_weapons
 
 
-def get_death_by_weapons(data, data_id):
+def get_death_by_weapons(data, data_id, match_id, time, name):
     db_death_by_weapons = []
     for item in data:
         db_death_by_weapons.append(WeaponDeaths(
             weapondeath_id=uuid.uuid4().time,
-            player_name=item.player,
+            player_name=name,
             player_id=item.player_id,
             steam_id_64=item.steam_id_64,
+            match_id=match_id,
+            match_time=time,
             weapon=item.weapon,
             kills=item.kill
             )

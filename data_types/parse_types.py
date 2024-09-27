@@ -13,12 +13,12 @@ async def parse_maps(data):
                 continue
             parsed_matches.append(Match(
                     id=match_id,
-                    long_name=match.get('long_name'),
+                    long_name=match.get('map').get('id'),
                     creation_time=match.get('creation_time'),
                     start=match.get('start'),
                     end=match.get('end'),
                     server_number=match.get('server_number'),
-                    map_name=match.get('map_name'),
+                    map_name=match.get('map').get('map').get('pretty_name'),
                 )
             )
         
@@ -28,8 +28,8 @@ async def parse_players(data):
     if data:
         parsed_players = []
         for player in data:
-            player_id = player.get('player_id')
-            steam_64 = player.get('steam_id_64')
+            player_id = player.get('id')
+            steam_64 = player.get('player_id')
             player_name = player.get('player')
             if not (player_id or steam_64 or player):
                 continue
@@ -38,7 +38,6 @@ async def parse_players(data):
             if most_killed := player.get('most_killed'):
                 for k, v in most_killed.items():
                     most_killed_list.append(PlayerKill(
-                            player=player_name,
                             player_id=player_id,
                             steam_id_64=steam_64,
                             victim=k,
@@ -50,7 +49,6 @@ async def parse_players(data):
             if death_by := player.get('death_by'):
                 for k, v in death_by.items():
                     death_by_list.append(PlayerKill(
-                            player=player_name,
                             player_id=player_id,
                             steam_id_64=steam_64,
                             victim=k,
@@ -62,7 +60,6 @@ async def parse_players(data):
             if weapons := player.get('weapons'):
                 for k, v in weapons.items():
                     weapons_list.append(WeaponKill(
-                            player=player_name,
                             player_id=player_id,
                             steam_id_64=steam_64,
                             weapon=k,
@@ -74,7 +71,6 @@ async def parse_players(data):
             if death_by_weapons := player.get('death_by_weapons'):
                 for k, v in death_by_weapons.items():
                     death_by_weapons_list.append(WeaponKill(
-                            player=player_name,
                             player_id=player_id,
                             steam_id_64=steam_64,
                             weapon=k,
@@ -83,7 +79,7 @@ async def parse_players(data):
                     )
 
             parsed_players.append(Player(
-                    id=player.get('id'),
+                    id=f'{player.get("map_id")}{player_id}',
                     player_id=player_id,
                     steam_id_64=steam_64,
                     player=player_name,
