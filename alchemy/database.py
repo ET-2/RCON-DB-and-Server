@@ -61,6 +61,89 @@ def get_player_by_steam64(steam_64):
 		return players
 
 
+def get_db_weapon_stats_by_steam64(steam_64):
+	with Session(engine) as session:
+		query = (
+			select(WeaponKills)
+			.where(WeaponKills.steam_id_64 == steam_64)
+		)
+
+		result = session.execute(query).scalars()
+		weapons = []
+
+		for weapon in result:
+			weapons.append(weapon)
+
+		return weapons
+
+
+def get_player_stats_by_steam64(steam_64):
+	with Session(engine) as session:
+		query = (
+			select(DBPlayer)
+			.where(DBPlayer.steam_id_64 == steam_64)
+		).order_by(DBPlayer.creation_time.desc())
+
+		result = session.execute(query).scalars()
+		players = []
+
+		for player in result:
+			players.append(player)
+
+		return players
+
+
+def get_player_kills_by_steam64(steam_64):
+	with Session(engine) as session:
+		query = (
+			select(PlayerKills)
+			.where(PlayerKills.steam_id_64 == steam_64)
+		)
+
+		result = session.execute(query).scalars()
+		kills = []
+
+		for kill in result:
+			kills.append(kill)
+
+		return kills
+
+
+def get_player_name_by_steam64(steam_64):
+	with Session(engine) as session:
+		query = (
+			select(DBPlayer)
+			.where(DBPlayer.steam_id_64 == steam_64)
+		).order_by(DBPlayer.creation_time.desc())
+
+		result = session.execute(query).scalars()
+		name = None
+		name = result.first().player
+
+		return name
+
+
+def get_coletrain():
+	cole_data = get_player_by_steam64(76561198029710441)
+	cole_list = []
+	for d in cole_data:
+		if d.player not in cole_list:
+			cole_list.append(d.player)
+
+	with Session(engine) as session:
+		query = (
+			select(PlayerKills)
+		)
+
+		result = session.execute(query).scalars()
+		kills = []
+
+		for kill in result:
+			kills.append(kill)
+
+		return cole_list, kills
+
+
 def get_player_kills():
 	with Session(engine) as session:
 		query = (

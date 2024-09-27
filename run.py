@@ -8,11 +8,28 @@ from data_types.parse_types import parse_maps, parse_players
 from tenacity import retry, stop_after_attempt
 
 
-async def run_matches(url, server, page):
+async def update():
+    west = 'https://crcon-west.theline.gg'
+
+    await run_matches(west, 'west', 1, 2)
+    await run_matches(west, 'event', 1, 1)
+
+
+async def start():
+    west = 'https://crcon-west.theline.gg'
+
+    await run_matches(west, 'server_5', 1, 5)
+    await run_matches(west, 'central', 1, 4)
+    await run_matches(west, 'east', 1, 3)
+    await run_matches(west, 'west', 1, 2)
+    await run_matches(west, 'event', 1, 1)
+
+
+async def run_matches(url, server, page, server_number):
     cur_page = page
-    ret_page = await get_maps(url, server, page)
+    ret_page = await get_maps(url, server, page, server_number)
     if ret_page > cur_page:
-        await run_matches(url, server, ret_page)
+        await run_matches(url, server, ret_page, server_number)
 
 
 @retry(stop=stop_after_attempt(5))
@@ -40,9 +57,9 @@ async def call_rcon(url, params):
         raise Exception
 
 
-async def get_maps(server_url, server_name, page):
+async def get_maps(server_url, server_name, page, server_number):
     url = f'{server_url}/api/get_scoreboard_maps'
-    params = {'page': page}
+    params = {'page': page, 'server_number': server_number}
     matches = await call_rcon(url=url, params=params)
     if matches == None:
         ret_page = page + 1
